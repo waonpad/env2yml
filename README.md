@@ -7,7 +7,7 @@ build ディレクトリに一部の環境向けのビルド済みバイナリ�
 ### 実行
 
 ```bash
-./build/env-2-yml-darwin-arm64 ./fixtures/.env.test
+./build/env2yml-darwin-arm64 ./fixtures/.env.test
 ```
 
 ## 自分でビルドする
@@ -20,10 +20,20 @@ brew install go
 
 ### ビルド
 
-Linux ARM64 用にビルドする場合
+Darwin ARM64 用にビルドする場合
 
 ```bash
-GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -trimpath -o build/env2yml-darwin-arm64 main.go; strip build/env2yml-darwin-arm64;
+```
+
+#### upx で更に圧縮する場合
+
+```bash
+brew install upx
+```
+
+```bash
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -trimpath -o build/env2yml-darwin-arm64 main.go; strip build/env2yml-darwin-arm64; upx --lzma build/env2yml-darwin-arm64
 ```
 
 以下コマンドで OS とアーキテクチャの一覧を確認できる
