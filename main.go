@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -24,13 +25,9 @@ func main() {
         os.Exit(1)
     }
 
-    // .env ファイルのファイル名の後ろに .yml を付けたファイル名を生成
-    yamlFile := envFile + ".yml"
-
-    // .env ファイルの内容を読み込む
     file, err := os.Open(envFile)
     if err != nil {
-        fmt.Println("Error opening file:", err)
+        fmt.Println("Error reading .env file:", err)
         os.Exit(1)
     }
     defer file.Close()
@@ -38,32 +35,32 @@ func main() {
     var envYamlContent strings.Builder
     scanner := bufio.NewScanner(file)
 
-	// .env ファイルの内容を読み込み、YAML 形式に変換
+    // 元ファイルと同じ順序で行を出力したいため、1行ずつ読み込んで処理
     for scanner.Scan() {
         line := scanner.Text()
-        // 空文字列またはコメント行はそのまま出力
-        if strings.TrimSpace(line) == "" || strings.HasPrefix(strings.TrimSpace(line), "#") {
-            envYamlContent.WriteString(line + "\n")
+
+        unmarshaled, err := godotenv.Unmarshal(line)
+        if err != nil {
+            fmt.Println("Error parsing line:", err)
+            os.Exit(1)
+        }
+
+        // プロパティが0個の場合はスキップ
+        if len(unmarshaled) == 0 {
             continue
         }
 
-        // key=value の形式を分割
-        parts := strings.SplitN(line, "=", 2)
-        if len(parts) != 2 {
-            fmt.Printf("Invalid line in .env file: %s\n", line)
+        // 1行ずつ読んでいるためプロパティが2個以上になるはずが無いが、もし2個以上あればエラー
+        if len(unmarshaled) > 1 {
+            fmt.Println("Error parsing line: multiple properties found")
             os.Exit(1)
         }
-        key := parts[0]
-        value := parts[1]
 
-        // 値が空文字の場合はダブルクォートで囲む
-        if value == "" {
-            envYamlContent.WriteString(fmt.Sprintf("%s: \"\"\n", key))
-        } else if _, err := strconv.Atoi(value); err == nil {
-            // 数値の場合はダブルクォートで囲む
-            envYamlContent.WriteString(fmt.Sprintf("%s: \"%s\"\n", key, value))
-        } else {
-            envYamlContent.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+        // プロパティが1個の場合は YAML 形式に変換
+        for key, value := range unmarshaled {
+            // ダブルクォートで囲む
+            // 改行文字は\nに変換
+            envYamlContent.WriteString(fmt.Sprintf("%s: \"%s\"\n", key, strings.ReplaceAll(value, "\n", "\\n")))
         }
     }
 
@@ -73,6 +70,7 @@ func main() {
     }
 
     // YAML ファイルを出力
+    yamlFile := envFile + ".yml"
     err = os.WriteFile(yamlFile, []byte(envYamlContent.String()), 0644)
     if err != nil {
         fmt.Println("Error writing file:", err)
