@@ -56,8 +56,11 @@ func main() {
         key := parts[0]
         value := parts[1]
 
-        // 数値の場合はダブルクォートで囲む
-        if _, err := strconv.Atoi(value); err == nil {
+        // 値が空文字の場合はダブルクォートで囲む
+        if value == "" {
+            envYamlContent.WriteString(fmt.Sprintf("%s: \"\"\n", key))
+        } else if _, err := strconv.Atoi(value); err == nil {
+            // 数値の場合はダブルクォートで囲む
             envYamlContent.WriteString(fmt.Sprintf("%s: \"%s\"\n", key, value))
         } else {
             envYamlContent.WriteString(fmt.Sprintf("%s: %s\n", key, value))
